@@ -27,7 +27,6 @@ export default function RootLayout({
       <ClerkProvider>
         <body className={`font-sans ${inter.variable}`}>
           <TRPCReactProvider cookies={cookies().toString()}>
-            
             <SignedOut>
               <div className="flex flex-1 h-screen justify-center items-center">
                 <SignIn afterSignInUrl={"/"} />

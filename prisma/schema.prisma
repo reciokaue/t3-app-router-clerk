@@ -2,21 +2,80 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-    provider = "prisma-client-js"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-    provider = "sqlite"
-    url      = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 model Post {
-    id        Int      @id @default(autoincrement())
-    name      String
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
-    clerkUser String
-    email     String
+  id        Int      @id @default(autoincrement())
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  clerkUser String
+  email     String
 
-    @@index([name, clerkUser])
+  @@index([name, clerkUser])
+}
+
+model Form {
+  id        Int      @id @default(autoincrement())
+  name      String
+  about     String?
+  active    Boolean  @default(true)
+  logoUrl   String?
+  isPublic  Boolean  @default(false)
+  createdAt DateTime @default(now())
+  clerkUser String
+
+  questions  Question[]
+  formTopics FormTopic[]
+  // sessions   Session[]
+}
+
+model Question {
+  id    Int    @id @default(autoincrement())
+  text  String
+  index Int
+
+  type   QuestionType @default(text)
+  formId Int
+  form   Form         @relation(fields: [formId], references: [id], onDelete: Cascade)
+
+  options Option[]
+  // responses Response[]
+}
+
+model Option {
+  id         Int    @id @default(autoincrement())
+  text       String
+  index      Int
+  questionId Int
+
+  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+}
+
+enum QuestionType {
+  text
+  select
+}
+
+model Topic {
+  id   Int    @id @default(autoincrement())
+  name String
+
+  formTopics FormTopic[]
+}
+
+model FormTopic {
+  formId  Int
+  topicId Int
+
+  form  Form  @relation(fields: [formId], references: [id], onDelete: Cascade)
+  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
+
+  @@id([formId, topicId])
 }
