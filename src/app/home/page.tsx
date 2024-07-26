@@ -1,21 +1,38 @@
 'use client'
 
+// import { api } from "@/trpc/server";
 import { Plus } from 'lucide-react'
 import { useState } from 'react'
 
+import { FormCard } from '@/components/form-card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Skeleton } from '@/components/ui/skeleton'
 import { api } from '@/trpc/react'
-
-import { FormCard } from '../components/form-card'
 
 export default function Home() {
   const [search, setSearch] = useState('')
 
-  const { data: forms, isLoading } = api.form.getFormsByUser.useQuery({
-    query: search,
+  const {
+    data: forms,
+    refetch,
+    isLoading,
+    error,
+  } = api.form.getFormsByUser.useQuery({
+    query: '',
   })
+
+  // const onChange = (event: any) => {
+  //   setSearch(event.target.value)
+  // }
+
+  // useEffect(() => {
+  //   if (search) {
+  //     const timeoutId = setTimeout(() => {
+  //       refetch()
+  //     }, 500)
+  //     return () => clearTimeout(timeoutId)
+  //   }
+  // }, [refetch, search])
 
   return (
     <div className="screen:px-0 mx-auto flex w-full max-w-6xl flex-col p-10">
@@ -25,12 +42,12 @@ export default function Home() {
             type="email"
             placeholder="Procurar..."
             className="w-full"
-            onChange={(event) => setSearch(event.target.value)}
+            onChange={(e) => setSearch(e.target.value)}
             value={search}
           />
         </div>
         <Button
-          // onClick={() => refetch()}
+          onClick={() => refetch()}
           // link="/form/new"
           type="submit"
           className="gap-2"
@@ -40,9 +57,12 @@ export default function Home() {
         </Button>
       </div>
       <div className="mt-8 grid grid-cols-1 gap-3 md:grid-cols-3">
-        {isLoading
-          ? [0, 1, 2].map((i) => <Skeleton className="h-52" key={i} />)
-          : forms?.map((form: any) => <FormCard data={form} key={form.id} />)}
+        {/* {forms?.map((form: any) => <FormCard data={form} key={form.id} />)} */}
+        {JSON.stringify(forms)}
+        {isLoading ? 'CARREGANDO...' : 'JA FOI'}
+        {error
+          ? 'Deu erro nessa merda' + JSON.stringify(error)
+          : 'Ainda nao deu erro '}
       </div>
     </div>
   )

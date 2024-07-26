@@ -6,14 +6,13 @@
  * TL;DR - This is where all the tRPC server stuff is created and plugged in. The pieces you will
  * need to use are documented accordingly near the end.
  */
-import { initTRPC } from "@trpc/server";
-import { type NextRequest } from "next/server";
-import superjson from "superjson";
-import { ZodError } from "zod";
+import { getAuth } from '@clerk/nextjs/server'
+import { initTRPC } from '@trpc/server'
+import { type NextRequest } from 'next/server'
+import superjson from 'superjson'
+import { ZodError } from 'zod'
 
-import { db } from "@/server/db";
-import { decodeJwt, type Session } from "@clerk/nextjs/server";
-import { clerkClient } from "@clerk/nextjs";
+import { db } from '@/server/db'
 
 /**
  * 1. CONTEXT
@@ -24,8 +23,9 @@ import { clerkClient } from "@clerk/nextjs";
  */
 
 interface CreateContextOptions {
-  headers: Headers;
-  session: Session | null;
+  headers: Headers
+  // session: Session | null
+  session: ReturnType<typeof getAuth> | null
 }
 
 /**
@@ -43,8 +43,8 @@ export const createInnerTRPCContext = (opts: CreateContextOptions) => {
     headers: opts.headers,
     db,
     session: opts.session,
-  };
-};
+  }
+}
 
 /**
  * This is the actual context you will use in your router. It will be used to process every request
@@ -52,34 +52,24 @@ export const createInnerTRPCContext = (opts: CreateContextOptions) => {
  *
  * @see https://trpc.io/docs/context
  */
-export const createTRPCContext = async (opts: { req: NextRequest }) => {
-  const sessionToken = opts.req.cookies.get("__session")?.value ?? "";
-
+export const createTRPCContext = (opts: { req: NextRequest }) => {
   try {
-    // Decode the JWT to get the session ID
-    const decodedJwt = decodeJwt(sessionToken);
-
-    // Verify the session with Clerk to get the session object
-    const verifiedSession = await clerkClient.sessions.verifySession(
-      decodedJwt.payload.sid,
-      sessionToken,
-    );
-
+    const session = getAuth(opts.req)
     // If the session is valid, return a context with the session
     return createInnerTRPCContext({
       headers: opts.req.headers,
-      session: verifiedSession,
-    });
+      session,
+    })
   } catch (error) {
-    console.log(error);
+    console.log(error)
   }
 
   // If the session is invalid, return a context with no session
   return createInnerTRPCContext({
     headers: opts.req.headers,
     session: null,
-  });
-};
+  })
+}
 
 /**
  * 2. INITIALIZATION
@@ -99,21 +89,21 @@ const t = initTRPC.context<typeof createTRPCContext>().create({
         zodError:
           error.cause instanceof ZodError ? error.cause.flatten() : null,
       },
-    };
+    }
   },
-});
+})
 
 const isAuthed = t.middleware(async ({ ctx, next }) => {
   if (!ctx.session) {
-    throw new Error("UNAUTHORIZED");
+    throw new Error('UNAUTHORIZED')
   }
 
   return next({
     ctx: {
       session: ctx.session,
     },
-  });
-});
+  })
+})
 
 /**
  * 3. ROUTER & PROCEDURE (THE IMPORTANT BIT)
@@ -127,7 +117,7 @@ const isAuthed = t.middleware(async ({ ctx, next }) => {
  *
  * @see https://trpc.io/docs/router
  */
-export const createTRPCRouter = t.router;
+export const createTRPCRouter = t.router
 
 /**
  * Public (unauthenticated) procedure
@@ -136,6 +126,6 @@ export const createTRPCRouter = t.router;
  * guarantee that a user querying is authorized, but you can still access user session data if they
  * are logged in.
  */
-export const publicProcedure = t.procedure;
+export const publicProcedure = t.procedure
 
-export const protectedProcedure = t.procedure.use(isAuthed);
+export const protectedProcedure = t.procedure.use(isAuthed)

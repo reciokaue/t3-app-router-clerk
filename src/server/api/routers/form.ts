@@ -1,5 +1,13 @@
-import { z } from 'zod';
-import { createTRPCRouter, publicProcedure, protectedProcedure } from '@/server/api/trpc';
+import { currentUser, useUser } from '@clerk/nextjs'
+import { z } from 'zod'
+
+import {
+  createTRPCRouter,
+  protectedProcedure,
+  publicProcedure,
+} from '@/server/api/trpc'
+
+import { formSelect } from '../selects/form'
 // import { prisma } from '../lib/prisma';
 // import { currentUser } from '@clerk/nextjs';
 // import { jwtRequest } from '../middlewares/JWTAuth';
@@ -38,15 +46,22 @@ export const formRouter = createTRPCRouter({
   //     });
   //   }),
 
-  getPostsByUser: publicProcedure
-    .input(z.object({ userId: z.string() }))
+  getFormsByUser: protectedProcedure
+    .input(z.object({ query: z.string().optional() }))
     .query(async ({ ctx, input }) => {
-      return ctx.db.post.findMany({
+      return ctx.db.form.findMany({
         where: {
-          clerkUser: input.userId,
+          clerkUser: String(ctx.session.userId),
+          ...(input.query && {
+            OR: [
+              { name: { contains: input.query } },
+              { about: { contains: input.query } },
+            ],
+          }),
         },
-        orderBy: { createdAt: "desc" },
-      });
+        select: formSelect,
+        orderBy: { createdAt: 'desc' },
+      })
     }),
 
   // getAllPosts: publicProcedure.query(({ ctx }) => {
@@ -54,7 +69,7 @@ export const formRouter = createTRPCRouter({
   //     orderBy: { createdAt: "desc" },
   //   });
   // }),
-});
+})
 
 // export const formRouter = createTRPCRouter({
 //   getForms: publicProcedure
